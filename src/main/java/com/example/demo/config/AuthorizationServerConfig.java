@@ -1,0 +1,95 @@
+package com.example.demo.config;
+
+import java.util.Optional;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
+import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
+import org.springframework.security.web.SecurityFilterChain;
+
+import com.example.demo.entities.OAuthClient;
+import com.example.demo.repository.OauthClientRepository;
+
+@Configuration
+public class AuthorizationServerConfig {
+
+  // From this way, the password needed stored in the database is the encoded
+  // password
+  // @Bean
+  // PasswordEncoder passwordEncoder() {
+  // return new BCryptPasswordEncoder();
+  // }
+
+  // From this way, the password needed stored in the database is the raw password
+  @Bean
+  PasswordEncoder passwordEncoder() {
+    return new PasswordEncoder() {
+      @Override
+      public String encode(CharSequence rawPassword) {
+        return rawPassword.toString();
+      }
+
+      @Override
+      public boolean matches(CharSequence rawPassword, String encodedPassword) {
+        return rawPassword.toString().equals(encodedPassword);
+      }
+    };
+  }
+
+  @Bean
+  SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    http.with(OAuth2AuthorizationServerConfigurer.authorizationServer(), Customizer.withDefaults());
+    return http.build();
+  }
+
+  @Bean
+  RegisteredClientRepository registeredClientRepository(OauthClientRepository repository) {
+    return new RegisteredClientRepository() {
+
+      @Override
+      public void save(RegisteredClient registeredClient) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'save'");
+      }
+
+      @Override
+      public RegisteredClient findById(String id) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'findById'");
+      }
+
+      @Override
+      public RegisteredClient findByClientId(String clientId) {
+
+        Optional<OAuthClient> result = repository.findByClientId(clientId);
+
+        System.out.println("clientId: " + clientId);
+
+        if (result.isEmpty()) {
+          return null;
+        }
+
+        OAuthClient client = result.get();
+
+        return RegisteredClient.withId(client.getId().toString())
+            .clientId(client.getClientId())
+            .clientName(client.getClientName())
+            .clientSecret(client.getClientSecret())
+            .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+            .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
+            .build();
+
+      }
+
+    };
+  }
+
+}
