@@ -9,7 +9,6 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -25,14 +24,6 @@ import com.example.demo.repository.OauthClientRepository;
 @EnableWebSecurity
 public class AuthorizationServerConfig {
 
-  // From this way, the password needed stored in the database is the encoded
-  // password
-  // @Bean
-  // PasswordEncoder passwordEncoder() {
-  // return new BCryptPasswordEncoder();
-  // }
-
-  // From this way, the password needed stored in the database is the raw password
   @Bean
   PasswordEncoder passwordEncoder() {
     return new PasswordEncoder() {
@@ -49,15 +40,18 @@ public class AuthorizationServerConfig {
   }
 
   @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+    OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = new OAuth2AuthorizationServerConfigurer();
+
     http
+        .securityMatcher("/oauth2/**")
         .authorizeHttpRequests(authorize -> authorize
             .requestMatchers(HttpMethod.POST, "/oauth2/token").permitAll()
             .anyRequest().authenticated())
         .csrf(csrf -> csrf.disable())
-        .with(OAuth2AuthorizationServerConfigurer.authorizationServer(),
-            Customizer.withDefaults())
+        .with(authorizationServerConfigurer, Customizer.withDefaults())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
     return http.build();
   }
 
@@ -67,19 +61,16 @@ public class AuthorizationServerConfig {
 
       @Override
       public void save(RegisteredClient registeredClient) {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'save'");
       }
 
       @Override
       public RegisteredClient findById(String id) {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'findById'");
       }
 
       @Override
       public RegisteredClient findByClientId(String clientId) {
-
         Optional<OAuthClient> result = repository.findByClientId(clientId);
 
         System.out.println("clientId: " + clientId);
@@ -97,10 +88,7 @@ public class AuthorizationServerConfig {
             .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
             .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
             .build();
-
       }
-
     };
   }
-
 }
