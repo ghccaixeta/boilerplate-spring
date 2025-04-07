@@ -4,8 +4,11 @@ import java.util.Optional;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -19,6 +22,7 @@ import com.example.demo.entities.OAuthClient;
 import com.example.demo.repository.OauthClientRepository;
 
 @Configuration
+@EnableWebSecurity
 public class AuthorizationServerConfig {
 
   // From this way, the password needed stored in the database is the encoded
@@ -46,7 +50,14 @@ public class AuthorizationServerConfig {
 
   @Bean
   SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http.with(OAuth2AuthorizationServerConfigurer.authorizationServer(), Customizer.withDefaults());
+    http
+        .authorizeHttpRequests(authorize -> authorize
+            .requestMatchers(HttpMethod.POST, "/oauth2/token").permitAll()
+            .anyRequest().authenticated())
+        .csrf(csrf -> csrf.disable())
+        .with(OAuth2AuthorizationServerConfigurer.authorizationServer(),
+            Customizer.withDefaults())
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
     return http.build();
   }
 
